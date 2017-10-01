@@ -1,6 +1,5 @@
 package com.ef;
 
-import java.io.Console;
 import java.io.File;
 import java.sql.ResultSet;
 import java.text.ParsePosition;
@@ -13,56 +12,60 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.ef.Parser.Duration;
+
+/**
+ * Controller class for the Parser application. 
+ * The core functions of the application are implemented in this class
+ */
 public class ParseController {
 	
-	private static Pattern pattern;
-	private static Matcher matcher;
-
-	enum Duration{
-		hourly, daily
+	private Pattern pattern;
+	private DatabaseAccess dbAccess;
+	
+	private String newLineDelimiter = "\n";
+	private String pipeDelimiter = "|";
+	
+	// SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd HH:MM:SS");
+	SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss");
+	
+	
+	private final String ipv4Pattern = "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
+	
+	
+	/**
+	 * Creates an instance of the database connection object
+	 */
+	ParseController(){
+		dbAccess = new DatabaseAccess();
+		pattern = Pattern.compile(ipv4Pattern); //This only needs to be compiled once the class is instantiated
 	}
-
-	// private static final String IPADDRESS_PATTERN =
-	// "^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
-	// "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
-	// "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
-	// "([01]?\\d\\d?|2[0-4]\\d|25[0-5])$";
-
-	private static final String ipv4Pattern = "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
-	private static final String ipv6Pattern = "([0-9a-f]{1,4}:){7}([0-9a-f]){1,4}";
+	
+	/**
+	 * Creates the main table where all log entries are stored
+	 * @param The name of the database table to be created
+	 */
+	public void createRequestTable(String mainTableName) {
+		dbAccess.mainTableName = mainTableName;
+		dbAccess.createMainTable(mainTableName);
+	}
+	
+	/**
+	 * Creates the filter table where filtered log entries are stored
+	 * @param The name of the database table to be created
+	 */
+	public void createFilterTable(String filterTableName){
+		dbAccess.filterTableName = filterTableName;
+		dbAccess.createFilterTable(filterTableName);
+	}
 
 	/**
-	 * Validate ip address with regular expression
-	 * 
-	 * @param ip
-	 *            ip address for validation
-	 * @return true valid ip address, false invalid ip address
+	 * Reads the log file from disk, parses the file using delimiter and writes contents to main table
+	 * @param The name of the log file
 	 */
-	public boolean validate(final String ip) {
-		matcher = pattern.matcher(ip);
-		return matcher.matches();
-	}
-
-	DatabaseAccess dbAccess;
-	
-	public void intializeDatabaseAccess() {		
-		dbAccess = new DatabaseAccess();
-	}
-	
-	public void createRequestTable() {
-		dbAccess.createTable("ipaddress");
-	}
-	
-	public void createFilterTable(){
-		dbAccess.createFilterTable("filter_results");
-	}
-
-	public void loadLogFile() {
+	public void loadLogFile(String logFileName) {
 		try {
-			Scanner scanner = new Scanner(new File("access_log"));
-
-			String newLineDelimiter = "\n";
-			String pipeDelimiter = "|";
+			Scanner scanner = new Scanner(new File(logFileName));
 
 			scanner.useDelimiter(newLineDelimiter);
 
@@ -73,9 +76,9 @@ public class ParseController {
 				String logEntry = scanner.next();
 
 				String ipAddress = checkLogForIPAddress(logEntry);
-				Date date = checkLogForTime(logEntry);
+				Date date = checkLogForTime(logEntry, this.dateFormat);
 
-				dbAccess.writeLogEntriesToDatabase(ipAddress, date, logEntry); //TODO opening and closing of database connection in loop?
+				dbAccess.writeLogEntryToMainTable(ipAddress, date, logEntry); //TODO opening and closing of database connection in loop?
 
 				logEntries.add(logEntry);
 
@@ -90,20 +93,21 @@ public class ParseController {
 		}
 	}
 
-	public Date checkLogForTime(String logEntry) {
+	/**
+	 * Parses the input string and searches for a time according to defined format
+	 * @param logEntry The input string to be parsed
+	 * @param dateFormat Predefined {@link SimpleDateFormat} format
+	 * @return A {@link Date} object if one is found
+	 */
+	private Date checkLogForTime(String logEntry, SimpleDateFormat dateFormat) {
 		
 		Date foundDate = null;
 		
-		// SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd HH:MM:SS");
-		SimpleDateFormat format = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss"); //TODO
-
-		int startingIndex = 0;
-
-		ParsePosition parsePostion = new ParsePosition(startingIndex);
+		ParsePosition parsePostion = new ParsePosition(0);
 
 		for (int i = 0; i < logEntry.length(); i++) {
 			parsePostion.setIndex(i);
-			foundDate = format.parse(logEntry, parsePostion);
+			foundDate = dateFormat.parse(logEntry, parsePostion);
 
 			if (foundDate != null)
 				break;
@@ -116,25 +120,34 @@ public class ParseController {
 		return foundDate;
 	}
 
-	public String checkLogForIPAddress(String logEntry) {
+	/**
+	 * Parses the input string and searches for a IP address
+	 * @param logEntry The input string to be parsed
+	 * @return An IP address string if one is found
+	 */
+	private String checkLogForIPAddress(String logEntry) {
 
 		String foundIPAddress = "";
-
-		pattern = Pattern.compile(ipv4Pattern);//TODO
 
 		Matcher matcher = pattern.matcher(logEntry);
 
 		if (matcher.find()) {
 			foundIPAddress = matcher.group();
-		} else {
-			System.out.printf("No match found.%n");
-			// TODO No IP found, throw exception?
+		} 
+		else {
+			System.out.printf("No match found.%n"); // TODO No IP found, throw exception?			
 		}
 
 		return foundIPAddress;
 	}
 	
-	
+	/**
+	 * Uses the input parameters to filter IP addresses that meet the criteria
+	 * @param startTime The start time of log entries to be filtered
+	 * @param duration The period after start time for log entries to be filtered
+	 * @param threshold The minimum amount of occurrence of the IP address to be filtered
+	 * @return A {@link ResultSet} of IP addresses that match the input criteria
+	 */
 	public ResultSet filterLogs(LocalDateTime startTime, Duration duration, int threshold) {
 
 		LocalDateTime endTime = null;
@@ -149,34 +162,11 @@ public class ParseController {
 		return dbAccess.fetchThresholdRequests(startTime, endTime, threshold);
 	}
 	
+	/**
+	 * Output the filtered results to both database and console
+	 * @param The {@link ResultSet} to be outputed
+	 */
 	public void outputFilteredResults(ResultSet resultSet){
 		dbAccess.writeFilteredResultsToDB(resultSet);
 	}
-
-	public void checkConsoleForIPAddress() {
-		pattern = Pattern.compile(ipv4Pattern);
-
-		Console console = System.console();
-
-		if (console == null) {
-			System.err.println("No console.");
-			System.exit(1);
-		}
-		while (true) {
-
-			Matcher matcher = pattern.matcher(console.readLine("Enter input IP to search: "));
-
-			boolean found = false;
-			while (matcher.find()) {
-				console.format("I found the IP" + " \"%s\" starting at " + "index %d and ending at index %d.%n",
-						matcher.group(), matcher.start(), matcher.end());
-				found = true;
-			}
-			if (!found) {
-				console.format("No match found.%n");
-			}
-		}
-
-	}
-
 }
