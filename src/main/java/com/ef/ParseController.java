@@ -1,6 +1,7 @@
 package com.ef;
 
-import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.sql.ResultSet;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
@@ -27,7 +28,7 @@ public class ParseController {
 	private String pipeDelimiter = "|";
 	
 	// SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd HH:MM:SS");
-	SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss");
+	private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss");
 	
 	
 	private final String ipv4Pattern = "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
@@ -36,9 +37,17 @@ public class ParseController {
 	/**
 	 * Creates an instance of the database connection object
 	 */
-	ParseController(){
+	public ParseController(){
 		dbAccess = new DatabaseAccess();
 		pattern = Pattern.compile(ipv4Pattern); //This only needs to be compiled once the class is instantiated
+	}
+	
+	/**
+	 * Initializes database access
+	 * @param
+	 */
+	public void initializeDatabase(InputStream databePropertiesStream){
+		dbAccess.initializeDatabaseAccess(databePropertiesStream);
 	}
 	
 	/**
@@ -46,7 +55,6 @@ public class ParseController {
 	 * @param The name of the database table to be created
 	 */
 	public void createRequestTable(String mainTableName) {
-		dbAccess.mainTableName = mainTableName;
 		dbAccess.createMainTable(mainTableName);
 	}
 	
@@ -55,20 +63,18 @@ public class ParseController {
 	 * @param The name of the database table to be created
 	 */
 	public void createFilterTable(String filterTableName){
-		dbAccess.filterTableName = filterTableName;
 		dbAccess.createFilterTable(filterTableName);
 	}
-
+	
 	/**
 	 * Reads the log file from disk, parses the file using delimiter and writes contents to main table
-	 * @param The name of the log file
+	 * @param logFileName The name of the log file
 	 */
-	public void loadLogFile(String logFileName) {
+	public void loadLogFile(InputStream logFileName) {
 		try {
-			Scanner scanner = new Scanner(new File(logFileName));
-
+			//Scanner scanner = new Scanner(new File(logFileName));
+			Scanner scanner = new Scanner(logFileName);
 			scanner.useDelimiter(newLineDelimiter);
-
 			List<String> logEntries = new ArrayList<>(); //TODO Only necessary if final report is required
 
 			while (scanner.hasNext()) {
@@ -81,8 +87,7 @@ public class ParseController {
 				dbAccess.writeLogEntryToMainTable(ipAddress, date, logEntry); //TODO opening and closing of database connection in loop?
 
 				logEntries.add(logEntry);
-
-				System.out.println(scanner.next()); //TODO for debugging
+				
 				System.out.println("log entry >> " + logEntries.size());
 			}
 			scanner.close();
@@ -92,7 +97,7 @@ public class ParseController {
 			e.printStackTrace();
 		}
 	}
-
+	
 	/**
 	 * Parses the input string and searches for a time according to defined format
 	 * @param logEntry The input string to be parsed
@@ -119,7 +124,7 @@ public class ParseController {
 
 		return foundDate;
 	}
-
+	
 	/**
 	 * Parses the input string and searches for a IP address
 	 * @param logEntry The input string to be parsed
@@ -161,6 +166,15 @@ public class ParseController {
 
 		return dbAccess.fetchThresholdRequests(startTime, endTime, threshold);
 	}
+	
+	/**
+	 * Gets a count of all log entries
+	 * @return
+	 */
+	public ResultSet getLogEntryCount() {
+		return dbAccess.fetchCountOfLogEntries();
+	}
+	
 	
 	/**
 	 * Output the filtered results to both database and console

@@ -1,8 +1,8 @@
 package com.ef;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -23,9 +23,35 @@ public class DatabaseAccess {
 	private PreparedStatement preparedStatement = null;
 	private ResultSet resultSet = null;
 	
-	public String mainTableName;
-	public String filterTableName;
+	private String mainTableName;
+	private String filterTableName;
+	
+	private MysqlDataSource dataSource;
 
+	/**
+	 * Loads a properties file and uses parameters from the file to create a connection to the database
+	 * @param
+	 * @throws IOException
+	 */
+	public void initializeDatabaseAccess(InputStream databePropertiesStream){		
+	
+		Properties props = new Properties();		
+		
+		try{
+			//FileInputStream fileInputStream = new FileInputStream("db.properties");		
+			props.load(databePropertiesStream);
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
+		
+		
+		dataSource = new MysqlConnectionPoolDataSource();
+
+		dataSource.setURL(props.getProperty("mysql.url"));
+		dataSource.setUser(props.getProperty("mysql.username"));
+		dataSource.setPassword(props.getProperty("mysql.password"));
+	}
 		
 	/**
 	 * Private method that loads a properties file and uses parameters from the file to a connection to the database
@@ -33,22 +59,22 @@ public class DatabaseAccess {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	private MysqlDataSource getMySQLDataSource() throws FileNotFoundException, IOException {
-
-		Properties props = new Properties();
-		MysqlDataSource datasource = new MysqlConnectionPoolDataSource();
-		
-		//FileInputStream fis = new FileInputStream("src/main/resources/db.properties");
-		FileInputStream fileInputStream = new FileInputStream("db.properties");
-		
-		props.load(fileInputStream);
-
-		datasource.setURL(props.getProperty("mysql.url"));
-		datasource.setUser(props.getProperty("mysql.username"));
-		datasource.setPassword(props.getProperty("mysql.password"));
-
-		return datasource;
-	}
+//	private MysqlDataSource getMySQLDataSource() throws FileNotFoundException, IOException {
+//		
+//		ClassLoader loader = Thread.currentThread().getContextClassLoader();
+//		InputStream resourceStream = loader.getResourceAsStream("db.properties");
+//		
+//		Properties props = new Properties();
+//		props.load(resourceStream);
+//				
+//		MysqlDataSource datasource = new MysqlConnectionPoolDataSource();
+//
+//		datasource.setURL(props.getProperty("mysql.url"));
+//		datasource.setUser(props.getProperty("mysql.username"));
+//		datasource.setPassword(props.getProperty("mysql.password"));
+//
+//		return datasource;
+//	}
 	
 	/**
 	 * Writes log entry to filter table
@@ -57,7 +83,7 @@ public class DatabaseAccess {
 	 */
 	private void writeLogEntryToFilterTable(String ipAddress, String comments) {
 		try {
-			connection = this.getMySQLDataSource().getConnection();
+			connection = this.dataSource.getConnection();
 			statement = connection.createStatement();
 
 			preparedStatement = connection.prepareStatement("INSERT INTO  parser."+ filterTableName + " VALUES (default, ?, ?)");
@@ -66,7 +92,6 @@ public class DatabaseAccess {
 			preparedStatement.setString(2, comments);
 			
 			preparedStatement.executeUpdate();
-			
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -81,7 +106,7 @@ public class DatabaseAccess {
 	 */
 	public void writeLogEntryToMainTable(String ipAddress, Date date, String fullText) {
 		try {
-			connection = this.getMySQLDataSource().getConnection();
+			connection = this.dataSource.getConnection();
 			statement = connection.createStatement();
 
 			preparedStatement = connection.prepareStatement("INSERT INTO  parser."+ mainTableName + " VALUES (default, ?, ?, ?)");
@@ -108,7 +133,7 @@ public class DatabaseAccess {
 	public void createMainTable(String tableName) {
 		this.mainTableName = tableName;
 		try {
-			connection = this.getMySQLDataSource().getConnection();
+			connection = this.dataSource.getConnection();
 			statement = connection.createStatement();
 			
 			statement.execute("DROP TABLE IF EXISTS parser." + mainTableName);
@@ -134,7 +159,7 @@ public class DatabaseAccess {
 	public void createFilterTable(String tableName) {
 		this.filterTableName = tableName;
 		try {
-			connection = this.getMySQLDataSource().getConnection();
+			connection = this.dataSource.getConnection();
 			statement = connection.createStatement();
 			
 			statement.execute("DROP TABLE IF EXISTS parser."+filterTableName);
@@ -159,7 +184,7 @@ public class DatabaseAccess {
 	public ResultSet fetchThresholdRequests(LocalDateTime startTime, LocalDateTime endTime, int threshold) {
 		try {		
 						
-			connection = this.getMySQLDataSource().getConnection();
+			connection = this.dataSource.getConnection();
 						
 			preparedStatement = connection.prepareStatement("SELECT ip_address, COUNT(ip_address) AS 'num' " +
 										" FROM parser."+ mainTableName + 
@@ -181,12 +206,36 @@ public class DatabaseAccess {
 	}
 	
 	/**
+	 * Fetches total count of IP Addresses
+	 * @return The {@link ResultSet} of count of entries in main table
+	 */
+	public ResultSet fetchCountOfLogEntries() {
+		try {			
+			connection = this.dataSource.getConnection();
+			
+			preparedStatement = connection.prepareStatement("SELECT COUNT(*) AS 'num' FROM parser."+ mainTableName);
+			
+			resultSet = preparedStatement.executeQuery();
+						
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			//close();
+		}
+		
+		return resultSet;
+	}
+	
+	/**
 	 * Write filtered results to filter table
 	 * @param resultSet {@link ResultSet} from main table
 	 */
 	public void writeFilteredResultsToDB(ResultSet resultSet) {
-		
+				
 		try{ 
+			if(!resultSet.next())
+				System.out.println("nothing!!");
+			
 			// ResultSet is initially before the first data set
 			while (resultSet.next()) {				
 				String ipAddress = resultSet.getString("ip_address");

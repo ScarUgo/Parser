@@ -1,5 +1,6 @@
 package com.ef;
 
+import java.io.FileInputStream;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,13 +37,16 @@ public class Parser {
 
 		try {
 			
-			parseCommandlineParameters(args); 					//Step 1: Validate the three input parameters entered in console			
-			parseController.createRequestTable("log_request");	//Step 2: Create log_request table
-			parseController.loadLogFile("access_log"); 			//Step 3: Read the log file entries and write to log_request table
-			parseController.createFilterTable("filter_result");	//Step 4: Create the filter_result table			
+			parseCommandlineParameters(args); 					//Step 1: Validate the three input parameters entered in console
+			parseController.initializeDatabase(new FileInputStream("db.properties"));	//Step 2: Initialize database
+			parseController.createRequestTable("log_request");	//Step 3: Create log_request table
+			
+			//parseController.loadLogFile("access_log"); 			//Step 4: Read the log file entries and write to log_request table
+			parseController.loadLogFile(new FileInputStream("access_log"));
+			parseController.createFilterTable("filter_result");	//Step 5: Create the filter_result table			
 			ResultSet resultSet = parseController				
-					.filterLogs(startDate, duration, threshold);//Step 5: Filter the results using input parameters 
-			parseController.outputFilteredResults(resultSet);	//Step 6: Write filter result to filter_result table and console
+					.filterLogs(startDate, duration, threshold);//Step 6: Filter the results using input parameters 
+			parseController.outputFilteredResults(resultSet);	//Step 7: Write filter result to filter_result table and console
 
 		} 
 		catch (Exception e) {
