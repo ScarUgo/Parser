@@ -1,6 +1,5 @@
 package com.ef;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
@@ -104,7 +103,6 @@ public class DatabaseAccess {
 	 */
 	public void writeLogEntryToMainTable(String ipAddress, Date date, String fullText) {
 		try {
-			System.out.println("mainTableName >> " + mainTableName);
 			connection = this.dataSource.getConnection();
 			statement = connection.createStatement();
 
@@ -115,8 +113,6 @@ public class DatabaseAccess {
 			preparedStatement.setString(3, fullText);
 			
 			preparedStatement.executeUpdate();
-			
-			
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

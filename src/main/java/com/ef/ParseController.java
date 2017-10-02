@@ -1,6 +1,5 @@
 package com.ef;
 
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.sql.ResultSet;
 import java.text.ParsePosition;
@@ -27,7 +26,7 @@ public class ParseController {
 	private String newLineDelimiter = "\n";
 	private String pipeDelimiter = "|";
 	
-	// SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd HH:MM:SS");
+	// SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd.HH:MM:SS");
 	private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss");
 	
 	
@@ -84,6 +83,8 @@ public class ParseController {
 			Scanner scanner = new Scanner(logFileName);
 			scanner.useDelimiter(newLineDelimiter);
 			List<String> logEntries = new ArrayList<>(); //TODO Only necessary if final report is required
+			
+			System.out.println("Starting file parsing ... ");
 
 			while (scanner.hasNext()) {
 
@@ -95,12 +96,11 @@ public class ParseController {
 				dbAccess.writeLogEntryToMainTable(ipAddress, date, logEntry); //TODO opening and closing of database connection in loop?
 
 				logEntries.add(logEntry);
-				
-				System.out.println("log entry >> " + logEntries.size());
 			}
 			scanner.close();
 
-			System.out.println("Array size >> " + logEntries.size());
+			System.out.println("... done with file parsing. Log entry count is: " + logEntries.size());
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

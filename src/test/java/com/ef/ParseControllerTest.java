@@ -33,16 +33,19 @@ public class ParseControllerTest {
 	@Test
 	public void loadLogFileTest(){		
 		
-		InputStream logFileStream = classLoader.getResourceAsStream("access_log");
+		InputStream logFileStream = classLoader.getResourceAsStream("requests.log");
 		
-		parseController.loadLogFile(logFileStream); // Main method being tested
+		// Main method being tested
+		parseController.loadLogFile(logFileStream); 
 		
 		ResultSet resultSet = parseController.getLogEntryCount(); 
 		
 		try{	
 			if(resultSet.next()){
-				int requestCount = Integer.valueOf(resultSet.getString("requestCount"));				
-				assertEquals(28, requestCount); //Check that the number of log entries parsed is equal to 28
+				int requestCount = Integer.valueOf(resultSet.getString("requestCount"));			
+				
+				//Check that the number of log entries parsed is equal to 28
+				assertEquals(28, requestCount); 
 			}
 		}
 		catch(Exception e){
@@ -67,9 +70,8 @@ public class ParseControllerTest {
 			  
 			  resultSet.beforeFirst(); // moves the cursor back to the first element
 			}
-			
-			
-			//iterate through the result set and test that 
+						
+			//iterate through the result set and test that count of ip request matches expected count
 			while (resultSet.next()) {
 				
 				String ipAddress = resultSet.getString("ip_address");

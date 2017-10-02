@@ -36,21 +36,29 @@ public class Parser {
         ParseController parseController = new ParseController(); // Utility class for accessing core functions
 
 		try {
+			//Step 1: Validate the three input parameters entered in console
+			parseCommandlineParameters(args); 					
 			
-			parseCommandlineParameters(args); 					//Step 1: Validate the three input parameters entered in console
-			parseController.initializeDatabase(new FileInputStream("db.properties"));	//Step 2: Initialize database
-			parseController.createRequestTable("log_request");	//Step 3: Create log_request table
+			//Step 2: Initialize database
+			parseController.initializeDatabase(new FileInputStream("db.properties"));	
 			
-			//parseController.loadLogFile("access_log"); 			//Step 4: Read the log file entries and write to log_request table
-			parseController.loadLogFile(new FileInputStream("access_log"));
-			parseController.createFilterTable("filter_result");	//Step 5: Create the filter_result table			
-			ResultSet resultSet = parseController				
-					.filterLogs(startDate, duration, threshold);//Step 6: Filter the results using input parameters 
-			parseController.outputFilteredResults(resultSet);	//Step 7: Write filter result to filter_result table and console
-
+			//Step 3: Create log_request table
+			parseController.createRequestTable("log_request");	
+			
+			//Step 4: Read the log file entries and write to log_request table		
+			parseController.loadLogFile(new FileInputStream("requests.log"));
+			
+			//Step 5: Create the filter_result table	
+			parseController.createFilterTable("filter_result");			
+			
+			//Step 6: Filter the results using input parameters 
+			ResultSet resultSet = parseController.filterLogs(startDate, duration, threshold);
+			
+			//Step 7: Write filter result to filter_result table and console
+			parseController.outputFilteredResults(resultSet);	
 		} 
 		catch (Exception e) {
-			e.printStackTrace(); //TODO throw error
+			e.printStackTrace();
 		}
 	}
 	
@@ -61,7 +69,7 @@ public class Parser {
 	 * @param args The command line arguments to be parsed and validated
 	 * @return Returns void
 	 */
-	private static void parseCommandlineParameters(String[] args){//TODO should throw validation exceptions
+	private static void parseCommandlineParameters(String[] args){
 		
 		// Loop through the command line arguments, split each using the '=' delimiter
 		// Pass the second array element(i.e. the value of the argument) to input variables of this Parser.java class
