@@ -4,54 +4,45 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.InputStream;
 import java.sql.ResultSet;
-import java.util.Properties;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.ef.Parser.Duration;
 
 public class ParseControllerTest {
 	
-	ParseController parseController;	
+	static ParseController parseController;	
+	static ClassLoader classLoader;
+	static String mainTableName = "test_log_request";
 	
-	@Before 
-	public void initializeDatabase(){
+	@BeforeClass 
+	public static void initializeDatabase(){
 		
-		//ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-		
-		ClassLoader classLoader = getClass().getClassLoader();
+		classLoader = ParseControllerTest.class.getClassLoader();
 		InputStream databasePropertiesStream = classLoader.getResourceAsStream("db.properties");
 		
 		parseController = new ParseController();
 		parseController.initializeDatabase(databasePropertiesStream);
-		parseController.createRequestTable("test_logEntry");	
-		
-		
-		Properties databaseProperties = new Properties();	
-		
-		try{			
-			databaseProperties.load(databasePropertiesStream);			
-		}
-		catch(Exception e){
-			e.printStackTrace();
-		}		
-				
+		parseController.createRequestTable(mainTableName);		
 	}
 
 	@Test
-	public void testLoadFile(){		
+	public void loadLogFileTest(){		
 		
-		ClassLoader classLoader = getClass().getClassLoader();
 		InputStream logFileStream = classLoader.getResourceAsStream("access_log");
 		
-		parseController.loadLogFile(logFileStream);
+		parseController.loadLogFile(logFileStream); // Main method being tested
 		
-		try{
-			ResultSet resultSet = parseController.getLogEntryCount();
-						
+		ResultSet resultSet = parseController.getLogEntryCount(); 
+		
+		try{	
 			if(resultSet.next()){
-				int num = Integer.valueOf(resultSet.getString("num"));				
-				assertEquals(28, num);
+				int requestCount = Integer.valueOf(resultSet.getString("requestCount"));				
+				assertEquals(28, requestCount); //Check that the number of log entries parsed is equal to 28
 			}
 		}
 		catch(Exception e){
@@ -59,8 +50,59 @@ public class ParseControllerTest {
 		}		
 	}
 	
-	@After
-	public void shutDownDatabase(){
+	@Test
+	public void filterLogFilesTest(){
 		
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd.HH:mm:ss");
+		
+		LocalDateTime startTime = LocalDateTime.parse("2017-09-24.03:05:39", formatter);
+		ResultSet resultSet = parseController.filterLogs(startTime, Duration.daily, 1);
+						
+		try{
+			int rowcount = 0;
+			if (resultSet.last()) {
+			  rowcount = resultSet.getRow(); //move cursor to the last row and get the total row count
+			  
+			  assertEquals(5, rowcount); // test for the total row count
+			  
+			  resultSet.beforeFirst(); // moves the cursor back to the first element
+			}
+			
+			
+			//iterate through the result set and test that 
+			while (resultSet.next()) {
+				
+				String ipAddress = resultSet.getString("ip_address");
+				int requestCount = Integer.valueOf(resultSet.getString("requestCount"));
+				
+				switch (ipAddress) {
+				case "104.144.182.201":
+					assertEquals(2, requestCount);
+					break;
+				case "173.44.167.191":
+					assertEquals(2, requestCount);
+					break;
+				case "41.190.31.223":
+					assertEquals(7, requestCount);
+					break;
+				case "62.210.203.97":
+					assertEquals(2, requestCount);
+					break;
+				case "64.145.79.151":
+					assertEquals(4, requestCount);
+					break;
+				default:
+					break;
+				}
+			}			
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}		
+	}
+	
+	@AfterClass
+	public static void dropTestTable(){
+		parseController.deleteTable(mainTableName); //Drop table
 	}
 }

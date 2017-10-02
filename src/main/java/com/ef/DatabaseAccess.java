@@ -33,24 +33,22 @@ public class DatabaseAccess {
 	 * @param
 	 * @throws IOException
 	 */
-	public void initializeDatabaseAccess(InputStream databePropertiesStream){		
+	public void initializeDatabaseAccess(InputStream databasePropertiesStream){		
 	
 		Properties props = new Properties();		
 		
 		try{
 			//FileInputStream fileInputStream = new FileInputStream("db.properties");		
-			props.load(databePropertiesStream);
+			props.load(databasePropertiesStream);
+			dataSource = new MysqlConnectionPoolDataSource();
+
+			dataSource.setURL(props.getProperty("mysql.url"));
+			dataSource.setUser(props.getProperty("mysql.username"));
+			dataSource.setPassword(props.getProperty("mysql.password"));
 		}
 		catch(Exception e){
 			e.printStackTrace();
 		}
-		
-		
-		dataSource = new MysqlConnectionPoolDataSource();
-
-		dataSource.setURL(props.getProperty("mysql.url"));
-		dataSource.setUser(props.getProperty("mysql.username"));
-		dataSource.setPassword(props.getProperty("mysql.password"));
 	}
 		
 	/**
@@ -106,6 +104,7 @@ public class DatabaseAccess {
 	 */
 	public void writeLogEntryToMainTable(String ipAddress, Date date, String fullText) {
 		try {
+			System.out.println("mainTableName >> " + mainTableName);
 			connection = this.dataSource.getConnection();
 			statement = connection.createStatement();
 
@@ -121,7 +120,7 @@ public class DatabaseAccess {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			close();
+			//close();
 		}
 	}
 	
@@ -175,6 +174,25 @@ public class DatabaseAccess {
 	}
 	
 	/**
+	 * Deletes database table
+	 * @param tableName Name of table to be deleted
+	 */
+	public void deleteTable(String tableName) {
+		try {
+			connection = this.dataSource.getConnection();
+			statement = connection.createStatement();
+			
+			statement.execute("DROP TABLE IF EXISTS parser." + tableName);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			close();
+		}
+
+	}
+	
+	/**
 	 * Fetches IP Addresses based on input criteria
 	 * @param startTime start time
 	 * @param endTime end time
@@ -186,7 +204,7 @@ public class DatabaseAccess {
 						
 			connection = this.dataSource.getConnection();
 						
-			preparedStatement = connection.prepareStatement("SELECT ip_address, COUNT(ip_address) AS 'num' " +
+			preparedStatement = connection.prepareStatement("SELECT ip_address, COUNT(ip_address) AS 'requestCount' " +
 										" FROM parser."+ mainTableName + 
 										" WHERE access_date >= '" + startTime + 
 										"' AND" + 
@@ -213,7 +231,7 @@ public class DatabaseAccess {
 		try {			
 			connection = this.dataSource.getConnection();
 			
-			preparedStatement = connection.prepareStatement("SELECT COUNT(*) AS 'num' FROM parser."+ mainTableName);
+			preparedStatement = connection.prepareStatement("SELECT COUNT(*) AS 'requestCount' FROM parser."+ mainTableName);
 			
 			resultSet = preparedStatement.executeQuery();
 						
@@ -239,9 +257,9 @@ public class DatabaseAccess {
 			// ResultSet is initially before the first data set
 			while (resultSet.next()) {				
 				String ipAddress = resultSet.getString("ip_address");
-				String num = resultSet.getString("num");
+				String requestCount = resultSet.getString("requestCount");
 				
-				String comment = "The ip " + ipAddress + " has exceeded threshold by making " + num + " requests";
+				String comment = "The ip " + ipAddress + " has exceeded threshold by making " + requestCount + " requests";
 				
 				System.out.println(comment); // output to console				
 				writeLogEntryToFilterTable(ipAddress, comment); //output to database
@@ -271,8 +289,9 @@ public class DatabaseAccess {
 				connection.close();
 				System.out.println("Closing connection");
 			}
-		} catch (Exception e) {
-
+		} 
+		catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 }

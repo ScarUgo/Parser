@@ -37,8 +37,7 @@ public class ParseController {
 	/**
 	 * Creates an instance of the database connection object
 	 */
-	public ParseController(){
-		dbAccess = new DatabaseAccess();
+	public ParseController(){		
 		pattern = Pattern.compile(ipv4Pattern); //This only needs to be compiled once the class is instantiated
 	}
 	
@@ -47,6 +46,7 @@ public class ParseController {
 	 * @param
 	 */
 	public void initializeDatabase(InputStream databePropertiesStream){
+		dbAccess = new DatabaseAccess();
 		dbAccess.initializeDatabaseAccess(databePropertiesStream);
 	}
 	
@@ -56,6 +56,14 @@ public class ParseController {
 	 */
 	public void createRequestTable(String mainTableName) {
 		dbAccess.createMainTable(mainTableName);
+	}
+	
+	/**
+	 * Deletes database table with specified name
+	 * @param The name of the database table to be deleted
+	 */
+	public void deleteTable(String tableName) {
+		dbAccess.deleteTable(tableName);
 	}
 	
 	/**
