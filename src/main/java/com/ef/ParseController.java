@@ -23,12 +23,10 @@ public class ParseController {
 	private Pattern pattern;
 	private DatabaseAccess dbAccess;
 	
-	private String newLineDelimiter = "\n";
-	private String pipeDelimiter = "|";
+	//private String newLineDelimiter = "\n";
+	private String pipeDelimiter = "\\|";
 	
-	// SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd.HH:MM:SS");
-	private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss");
-	
+	private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
 	
 	private final String ipv4Pattern = "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
 	
@@ -81,8 +79,8 @@ public class ParseController {
 		try {
 			//Scanner scanner = new Scanner(new File(logFileName));
 			Scanner scanner = new Scanner(logFileName);
-			scanner.useDelimiter(newLineDelimiter);
-			List<String> logEntries = new ArrayList<>(); //TODO Only necessary if final report is required
+			scanner.useDelimiter(pipeDelimiter);
+			List<String> logEntries = new ArrayList<String>(); //TODO Only necessary if final report is required
 			
 			System.out.println("Starting file parsing ... ");
 
@@ -92,14 +90,14 @@ public class ParseController {
 
 				String ipAddress = checkLogForIPAddress(logEntry);
 				Date date = checkLogForTime(logEntry, this.dateFormat);
-
+				
 				dbAccess.writeLogEntryToMainTable(ipAddress, date, logEntry); //TODO opening and closing of database connection in loop?
 
 				logEntries.add(logEntry);
 			}
 			scanner.close();
 
-			System.out.println("... done with file parsing. Log entry count is: " + logEntries.size());
+			System.out.println("File parsing completed. Log entry count is: " + logEntries.size());
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -127,7 +125,7 @@ public class ParseController {
 		}
 
 		if (foundDate == null) {
-			// TODO No date found, throw exception?
+			System.err.println("No Date found");	
 		}
 
 		return foundDate;
@@ -148,7 +146,7 @@ public class ParseController {
 			foundIPAddress = matcher.group();
 		} 
 		else {
-			System.out.printf("No match found.%n"); // TODO No IP found, throw exception?			
+			System.err.println("No IP Address found");			
 		}
 
 		return foundIPAddress;

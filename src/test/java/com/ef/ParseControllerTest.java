@@ -45,7 +45,7 @@ public class ParseControllerTest {
 				int requestCount = Integer.valueOf(resultSet.getString("requestCount"));			
 				
 				//Check that the number of log entries parsed is equal to 28
-				assertEquals(28, requestCount); 
+				assertEquals(27, requestCount); 
 			}
 		}
 		catch(Exception e){
@@ -64,10 +64,8 @@ public class ParseControllerTest {
 		try{
 			int rowcount = 0;
 			if (resultSet.last()) {
-			  rowcount = resultSet.getRow(); //move cursor to the last row and get the total row count
-			  
-			  assertEquals(5, rowcount); // test for the total row count
-			  
+			  rowcount = resultSet.getRow(); //move cursor to the last row and get the total row count			  
+			  assertEquals(5, rowcount); // test for the total row count			  
 			  resultSet.beforeFirst(); // moves the cursor back to the first element
 			}
 						
@@ -91,7 +89,7 @@ public class ParseControllerTest {
 					assertEquals(2, requestCount);
 					break;
 				case "64.145.79.151":
-					assertEquals(4, requestCount);
+					assertEquals(3, requestCount);
 					break;
 				default:
 					break;

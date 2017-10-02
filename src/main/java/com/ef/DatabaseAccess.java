@@ -36,8 +36,7 @@ public class DatabaseAccess {
 	
 		Properties props = new Properties();		
 		
-		try{
-			//FileInputStream fileInputStream = new FileInputStream("db.properties");		
+		try{	
 			props.load(databasePropertiesStream);
 			dataSource = new MysqlConnectionPoolDataSource();
 
@@ -50,29 +49,6 @@ public class DatabaseAccess {
 		}
 	}
 		
-	/**
-	 * Private method that loads a properties file and uses parameters from the file to a connection to the database
-	 * @return
-	 * @throws FileNotFoundException
-	 * @throws IOException
-	 */
-//	private MysqlDataSource getMySQLDataSource() throws FileNotFoundException, IOException {
-//		
-//		ClassLoader loader = Thread.currentThread().getContextClassLoader();
-//		InputStream resourceStream = loader.getResourceAsStream("db.properties");
-//		
-//		Properties props = new Properties();
-//		props.load(resourceStream);
-//				
-//		MysqlDataSource datasource = new MysqlConnectionPoolDataSource();
-//
-//		datasource.setURL(props.getProperty("mysql.url"));
-//		datasource.setUser(props.getProperty("mysql.username"));
-//		datasource.setPassword(props.getProperty("mysql.password"));
-//
-//		return datasource;
-//	}
-	
 	/**
 	 * Writes log entry to filter table
 	 * @param ipAddress
@@ -91,7 +67,7 @@ public class DatabaseAccess {
 			preparedStatement.executeUpdate();
 			
 		} catch (Exception e) {
-			e.printStackTrace();
+			e.printStackTrace(); 
 		}
 	}
 
@@ -116,7 +92,7 @@ public class DatabaseAccess {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			//close();
+			close();
 		}
 	}
 	
@@ -248,7 +224,9 @@ public class DatabaseAccess {
 				
 		try{ 
 			if(!resultSet.next())
-				System.out.println("nothing!!");
+				System.err.println("No data was filtered out");
+			
+			resultSet.beforeFirst(); // moves the cursor back to the first element
 			
 			// ResultSet is initially before the first data set
 			while (resultSet.next()) {				
@@ -264,6 +242,9 @@ public class DatabaseAccess {
 		catch(Exception e){
 			e.printStackTrace();
 		}		
+		finally {
+			close();
+		}
 	}
 
 	/**
@@ -273,17 +254,14 @@ public class DatabaseAccess {
 		try {
 			if (resultSet != null) {
 				resultSet.close();
-				System.out.println("Closing resultSet");
 			}
 
 			if (statement != null) {
 				statement.close();
-				System.out.println("Closing statement");
 			}
 
 			if (connection != null) {
 				connection.close();
-				System.out.println("Closing connection");
 			}
 		} 
 		catch (Exception e) {

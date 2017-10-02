@@ -15,7 +15,7 @@ public class Parser {
 	/**Input parameters read from console*/
 	private static LocalDateTime startDate;
 	private static Duration duration;
-	private static int threshold;
+	private static Integer threshold;
 	
 	/**Defined duration types*/
 	enum Duration{
@@ -64,7 +64,7 @@ public class Parser {
 	
 	/**
 	 * This function reads the command line arguments and validates them.
-	 * This function updates the class variables used in the main() function
+	 * It updates the class variables used in the main() function
 	 * 
 	 * @param args The command line arguments to be parsed and validated
 	 * @return Returns void
@@ -93,6 +93,10 @@ public class Parser {
 			default:
 				throw new IllegalArgumentException("Argument not recognized: " + keyValuePair[0]);
 			}
+		}
+		
+		if(startDate == null || threshold == null || duration == null){
+			throw new IllegalArgumentException("One or more arguments are mising. Required arguments are --startDate --threshold --duration");
 		}
 	}
 
